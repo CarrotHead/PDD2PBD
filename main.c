@@ -42,7 +42,6 @@
 
 /* USER CODE BEGIN Includes */
 #include "motor_driver.h"
-#include "stepper_m.h"
 #include "stdbool.h"
 /* USER CODE END Includes */
 
@@ -62,6 +61,7 @@ bool roller_state=roller_stopped;
 uint8_t current_stage=0;
 bool timeout_start=0;
 bool timed_out=0;
+
 extern uint32_t ms_count;
 /* USER CODE END PV */
 
@@ -115,7 +115,8 @@ int main(void)
   MX_ADC_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-  motor_init();
+  dc_motor_init();
+  stepper_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -130,13 +131,20 @@ int main(void)
         if(action_done == 0)
         {
           if(roller_state==roller_running)
-            motor_on(1);
+            dc_motor_on(800,1);
           else
-            motor_off(1);
+            dc_motor_off();
           if(clamp_state == clamp_closed)
-            Motor_CW(20);
+          {
+            stepper_motor_on(1);
+            HAL_Delay(3000);
+          }
           else
-            Motor_CCW(20);
+          {
+            stepper_motor_on(0);
+            HAL_Delay(3000);
+          }
+          stepper_motor_off();
           action_done=1;
         }
         if(coin_detect == 1)
@@ -151,13 +159,20 @@ int main(void)
         if(action_done == 0)
         {
           if(clamp_state == clamp_closed)
-            Motor_CW(20);
+          {
+            stepper_motor_on(1);
+            HAL_Delay(3000);
+          }
           else
-             Motor_CCW(20);
+          {
+             stepper_motor_on(0);
+             HAL_Delay(3000);
+          }
           if(roller_state==roller_running)
-            motor_on(1);
+            dc_motor_on(800,1);
           else
-            motor_off(1);
+            dc_motor_off();
+          stepper_motor_off();
           action_done=1;
         }
         while(detect_bag);
@@ -169,24 +184,20 @@ int main(void)
         if(timed_out==1)
           current_stage=empty_roll;
         else
-        {
-          ms_count=0;
-          timeout_start=0;
-          current_stage=wait_coin;
-        }
+          current_stage=wait_coin;       
+        ms_count=0;
+        timeout_start=0;
         coin_detect=0;
         action_done=0;
       break;
       case empty_roll:
         if(action_done==0)
         {
-          motor_off(1);
+          dc_motor_off();
           action_done=1;
         }
       break;
     }
-    
-      
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -374,8 +385,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, LCD_RST_Pin|LCD_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LCD_DC_Pin|STEPM_1_Pin|STEPM_2_Pin|STEPM_3_Pin 
-                          |STEPM_4_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LCD_DC_GPIO_Port, LCD_DC_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -390,14 +400,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LCD_DC_Pin STEPM_1_Pin STEPM_2_Pin STEPM_3_Pin 
-                           STEPM_4_Pin */
-  GPIO_InitStruct.Pin = LCD_DC_Pin|STEPM_1_Pin|STEPM_2_Pin|STEPM_3_Pin 
-                          |STEPM_4_Pin;
+  /*Configure GPIO pin : LCD_DC_Pin */
+  GPIO_InitStruct.Pin = LCD_DC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(LCD_DC_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Bag_Detect_Pin */
   GPIO_InitStruct.Pin = Bag_Detect_Pin;

@@ -34,10 +34,12 @@
 #include "stm32l0xx_hal.h"
 #include "stm32l0xx.h"
 #include "stm32l0xx_it.h"
-#include "stdbool.h"
+
 /* USER CODE BEGIN 0 */
+#include "stdbool.h"
 extern bool timeout_start;
 extern bool timed_out;
+extern bool stepper_start;
 uint32_t ms_count=0;
 /* USER CODE END 0 */
 
@@ -54,11 +56,14 @@ extern ADC_HandleTypeDef hadc;
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
+
   if(timeout_start==1)
   {
     ms_count++;
     if(ms_count%10000 == 0)
+    {
       timed_out=1;
+    }
   }
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
